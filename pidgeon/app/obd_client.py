@@ -2,7 +2,7 @@ import asyncio
 from bleak import BleakScanner, BleakClient
 from app.supabase_client import SessionLogger
 
-FAST_INTERVAL = 0.1
+FAST_INTERVAL = 0.25
 SLOW_INTERVAL = 2.0
 
 SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb"
@@ -89,6 +89,7 @@ class OBDClient:
         while self.running:
             for label, cmd in FAST_PIDS.items():
                 await self._poll_pid(label, cmd)
+		await asyncio.sleep(0.05)
             await asyncio.sleep(FAST_INTERVAL)
 
     async def _slow_loop(self):
