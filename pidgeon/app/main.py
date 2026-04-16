@@ -38,7 +38,9 @@ async def health():
     return {
         "status": "ok",
         "connected": obd.connected,
-        "session_id": app.state.session_id
+        "device_name": obd.device_name,
+        "session_id": app.state.session_id,
+        "live_data": obd.live_data if obd.connected else {}
     }
 
 @app.get("/data")

@@ -103,6 +103,31 @@ npm run dev
 
 Pair your OBD adapter via Bluetooth, open `localhost:5173`, and drive.
 
+### Hardware Test (FD10 in the Jeep)
+
+With the FD10 plugged in and `start.sh` running, confirm BLE connection and live PIDs:
+
+```bash
+curl -s http://localhost:8000/health | python3 -m json.tool
+```
+
+Connected and polling looks like:
+
+```json
+{
+    "status": "ok",
+    "connected": true,
+    "device_name": "OBD Device",
+    "session_id": "uuid-here",
+    "live_data": {
+        "RPM":   { "value": 750.0, "unit": "rpm" },
+        "SPEED": { "value": 0.0,   "unit": "mph" }
+    }
+}
+```
+
+Not connected: `"connected": false`, `"device_name": null`, `"live_data": {}`.
+
 ---
 
 ## Open Source vs SaaS

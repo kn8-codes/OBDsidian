@@ -95,6 +95,7 @@ class OBDClient:
 
     def __init__(self):
         self.connected: bool = False
+        self.device_name: str | None = None
         self.live_data: dict = {}
         self._client: BleakClient | None = None
         self._response_buf: str = ""
@@ -121,6 +122,7 @@ class OBDClient:
         for d in devices:
             if d.name and "OBD" in d.name.upper():
                 print(f"Found: {d.name} | {d.address}")
+                self.device_name = d.name
                 return d.address
         print("FD10 not found — is it plugged in and powered?")
         return None
