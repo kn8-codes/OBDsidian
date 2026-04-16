@@ -90,12 +90,13 @@ cd obdsidian
 
 # Backend (PIDgeon)
 cd pidgeon
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env  # add your Supabase credentials
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 
-# Frontend
-cd ../ui
+# Frontend (separate terminal)
+cd ../dashboard
 npm install
 npm run dev
 ```
