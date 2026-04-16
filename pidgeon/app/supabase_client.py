@@ -28,6 +28,25 @@ async def log_telemetry(session_id: str, pid: str, value: float, unit: str):
         "unit": unit
     }).execute()
 
+async def log_telemetry_batch(rows: list[dict]):
+    """Batch-insert telemetry rows. Each row must have: session_id, pid, value, unit.
+
+    If the telemetry table doesn't exist yet, run this in Supabase SQL editor:
+
+    CREATE TABLE IF NOT EXISTS public.telemetry (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id  uuid NOT NULL REFERENCES public.sessions(id) ON DELETE CASCADE,
+        pid         text NOT NULL,
+        value       double precision NOT NULL,
+        unit        text NOT NULL DEFAULT '',
+        created_at  timestamptz NOT NULL DEFAULT now()
+    );
+    CREATE INDEX ON public.telemetry (session_id, created_at DESC);
+    """
+    if not rows:
+        return
+    supabase.table("telemetry").insert(rows).execute()
+
 async def log_dtc(session_id: str, code: str, description: str):
     supabase.table("dtcs").insert({
         "session_id": session_id,

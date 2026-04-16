@@ -1,7 +1,9 @@
 import asyncio
 from bleak import BleakScanner, BleakClient
 from app.config import FAST_POLL_INTERVAL, SLOW_POLL_INTERVAL
-from app.supabase_client import log_telemetry
+from app.supabase_client import log_telemetry_batch
+
+TELEMETRY_BATCH_SIZE = 8
 
 # FD10 GATT profile (confirmed via BLE Hero)
 SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb"
@@ -100,6 +102,7 @@ class OBDClient:
         self._client: BleakClient | None = None
         self._response_buf: str = ""
         self._response_event: asyncio.Event = asyncio.Event()
+        self._telemetry_buffer: list[dict] = []
 
     # ------------------------------------------------------------------
     # BLE notification handler
@@ -164,8 +167,9 @@ class OBDClient:
             return False
 
     async def disconnect(self):
-        """Stop polling, un-subscribe notifications, and close BLE connection."""
+        """Stop polling, flush any buffered telemetry, and close BLE connection."""
         self.connected = False
+        await self._flush_telemetry()
         await self._cleanup()
 
     async def _cleanup(self):
@@ -208,6 +212,30 @@ class OBDClient:
         return self._response_buf
 
     # ------------------------------------------------------------------
+    # Telemetry buffer helpers
+    # ------------------------------------------------------------------
+
+    def _buffer_reading(self, session_id: str, pid: str, value: float, unit: str):
+        """Append one reading to the in-memory buffer."""
+        self._telemetry_buffer.append({
+            "session_id": session_id,
+            "pid": pid,
+            "value": value,
+            "unit": unit,
+        })
+
+    async def _flush_telemetry(self):
+        """Batch-insert all buffered rows, then clear the buffer."""
+        if not self._telemetry_buffer:
+            return
+        batch = self._telemetry_buffer[:]
+        self._telemetry_buffer.clear()
+        try:
+            await log_telemetry_batch(batch)
+        except Exception as e:
+            print(f"Telemetry flush error: {e}")
+
+    # ------------------------------------------------------------------
     # Polling loops
     # ------------------------------------------------------------------
 
@@ -229,7 +257,9 @@ class OBDClient:
                     value, unit = decode(pid, raw)
                     if value is not None:
                         self.live_data[pid] = {"value": value, "unit": unit}
-                        await log_telemetry(session_id, pid, value, unit)
+                        self._buffer_reading(session_id, pid, value, unit)
+                        if len(self._telemetry_buffer) >= TELEMETRY_BATCH_SIZE:
+                            await self._flush_telemetry()
                 except Exception as e:
                     print(f"Fast poll error [{pid}]: {e}")
             await asyncio.sleep(FAST_POLL_INTERVAL)
@@ -245,7 +275,9 @@ class OBDClient:
                     value, unit = decode(pid, raw)
                     if value is not None:
                         self.live_data[pid] = {"value": value, "unit": unit}
-                        await log_telemetry(session_id, pid, value, unit)
+                        self._buffer_reading(session_id, pid, value, unit)
                 except Exception as e:
                     print(f"Slow poll error [{pid}]: {e}")
+            # flush after each slow cycle so these don't wait too long
+            await self._flush_telemetry()
             await asyncio.sleep(SLOW_POLL_INTERVAL)
