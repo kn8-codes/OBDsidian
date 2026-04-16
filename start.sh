@@ -8,7 +8,7 @@ uvicorn app.main:app --reload &
 BACKEND_PID=$!
 echo "Backend started (PID $BACKEND_PID)"
 
-cd ~/Projects/OBDsidian/pidgeon/dashboard
+cd ~/Projects/OBDsidian/dashboard
 npm run dev &
 FRONTEND_PID=$!
 echo "Dashboard started (PID $FRONTEND_PID)"
