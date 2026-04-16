@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timezone
 from supabase import create_client
 from app.config import SUPABASE_URL, SUPABASE_KEY
 
@@ -15,7 +16,7 @@ async def create_session(vehicle: str = "2012 Jeep Liberty", notes: str = "") ->
 
 async def end_session(session_id: str):
     supabase.table("sessions").update({
-        "ended_at": "now()"
+        "ended_at": datetime.now(timezone.utc).isoformat()
     }).eq("id", session_id).execute()
     print(f"Session ended: {session_id}")
 
